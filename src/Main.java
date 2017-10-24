@@ -1,15 +1,32 @@
+import cache.Cache;
+import cache.FIFOCache;
+import cache.RANDCache;
 import javafx.util.Pair;
 
-import java.util.*;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.Scanner;
 
 public class Main {
 
-    private static Queue<Pair<Integer, Integer>> retrievalQueue = new ArrayDeque<>();
+    //Stores scheduled events in the form of (time, itemNo) where time = event time & 1 <= itemNo <= N
+    //Ordered by time ascending
+    private static Queue<Pair<Double, Integer>> scheduledArrivals = new PriorityQueue<>((o1, o2) -> {
+        if (o1.getKey().equals(o2.getKey())) {
+            return 0;
+        }
+
+        if (o1.getKey() > o2.getKey()) {
+            return 1;
+        }
+
+        return -1;
+    });
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         System.out.println("Please type values for n and m: \n");
-        int n = sc.nextInt();
+        int N = sc.nextInt();
         int m = sc.nextInt();
         System.out.println("Please enter a strategy: RAND or FIFO\n");
         String strategy = sc.next();
@@ -28,112 +45,44 @@ public class Main {
                 return;
         }
 
-        System.out.println(cache);
+        int T = 0;
+        scheduleInitialArrivals(N);
+
+//        while (true) {
+//            Pair<Integer, Integer> arrivalPair = scheduledArrivals.poll();
+//            T = arrivalPair.getKey();
+//            int arrivalIndex = arrivalPair.getValue();
+//            scheduleNext(T, arrivalIndex);
+//            System.out.println("Time of " + T);
+//        }
+
+//        System.out.println(cache);
 
     }
 
-    private static abstract class Cache {
-        Set<Integer> knownVals = new HashSet<>();
-
-        public Cache(int size) {
-            populateCache(size);
+    private static void scheduleInitialArrivals(int N) {
+        for (int i = 0; i < N; i++) {
+            scheduleNext(0, i + 1);
         }
-
-        private void populateCache(int size) {
-            for (int i = 1; i <= size; i ++) {
-
-                addToStore(i);
-                knownVals.add(i);
-            }
-
-        }
-
-        public boolean retrieve(int val) {
-            if (knownVals.contains(val)) {
-                return true;
-            }
-            replace(val);
-            knownVals.add(val);
-            return false;
-        }
-
-        protected abstract void replace(int val);
-        protected abstract void addToStore(int val);
     }
 
-    private static class FIFOCache extends Cache {
-        private Queue<Integer> store;
+    private static void scheduleNext(int T, int num) {
+        double arrivalTime = getNextArrival(T, num);
+        Pair p = new Pair<>(arrivalTime, num);
+        scheduledArrivals.add(p);
 
-        public FIFOCache(int size) {
-            super(size);
+        double arrivalSum = 0;
+        for (int i = 0; i < 500; i ++) {
+            arrivalSum += getNextArrival(0, 9);
         }
-
-        private void evict() {
-            int removed = store.poll();
-            knownVals.remove(removed);
-        }
-
-        @Override
-        protected void replace(int val) {
-            evict();
-            store.add(val);
-        }
-
-        @Override
-        protected void addToStore(int val) {
-            if (store == null) {
-                store = new ArrayDeque<>();
-            }
-            store.add(val);
-        }
-
+        System.out.println("AVERAGE TIME IS :" + arrivalSum/500.0);
     }
 
-    private static class RANDCache extends Cache {
-        private List<Integer> store;
-        private Victimiser victimiser;
+    private static double getNextArrival(int T, int num) {
+        double rand = Math.random();
+        double interval = -Math.log(1 - rand) * num; //lambda = 1/num
+        return T + interval;
 
-        public RANDCache(int size) {
-            super(size);
-            this.victimiser = new Victimiser(size);
-
-        }
-
-        private int evict() {
-            int victimPosition = victimiser.next();
-            knownVals.remove(store.get(victimPosition));
-            store.remove(victimPosition);
-            return victimPosition;
-        }
-
-        @Override
-        protected void replace(int val) {
-            int evictPos = evict();
-            store.add(evictPos, val);
-        }
-
-        @Override
-        protected void addToStore(int val) {
-            if (store == null) {
-                store = new ArrayList<>();
-            }
-            store.add(val);
-        }
-
-    }
-
-    private static class Victimiser {
-        private int size;
-        private Random rand;
-
-        public Victimiser(int size) {
-            this.size = size;
-            rand = new Random();
-        }
-
-        public int next() {
-            return rand.nextInt(size);
-        }
     }
 
 }
