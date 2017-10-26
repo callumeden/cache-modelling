@@ -1,4 +1,6 @@
-public class StatsLogger {
+package stats;
+
+public class StatsUtil {
 
     private static final double CRTICAIL_VALUE = 1.96;
     private final int sampleSize;
@@ -7,7 +9,7 @@ public class StatsLogger {
     private double dataPointsSum;
 
 
-    public StatsLogger(int sampleSize) {
+    public StatsUtil(int sampleSize) {
         this.sampleSize = sampleSize;
         dataPoints = new double[sampleSize];
     }

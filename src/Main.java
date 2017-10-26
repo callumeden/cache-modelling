@@ -2,6 +2,7 @@ import cache.Cache;
 import cache.FIFOCache;
 import cache.RANDCache;
 import javafx.util.Pair;
+import stats.StatsUtil;
 
 import java.util.Comparator;
 import java.util.PriorityQueue;
@@ -39,8 +40,8 @@ public class Main {
             return;
         }
 
-        StatsLogger hitRatioStats = new StatsLogger(SAMPLE_SIZE);
-        StatsLogger missRateStats = new StatsLogger(SAMPLE_SIZE);
+        StatsUtil hitRatioStats = new StatsUtil(SAMPLE_SIZE);
+        StatsUtil missRateStats = new StatsUtil(SAMPLE_SIZE);
 
         for (int k = 0; k < SAMPLE_SIZE; k++) {
             //Returns a pair <Hit Ratio, Miss Rate>
@@ -114,7 +115,7 @@ public class Main {
         return T + interval;
     }
 
-    private static void writeStatsToConsole(StatsLogger hitRatioStats, StatsLogger missRateStats) {
+    private static void writeStatsToConsole(StatsUtil hitRatioStats, StatsUtil missRateStats) {
         System.out.println("Hit ratio mean: " + hitRatioStats.getMean());
         System.out.println("Hit ratio confidence interval (95%): " + hitRatioStats.getConfidenceInterval());
         System.out.println("Miss rate mean: " + missRateStats.getMean());
