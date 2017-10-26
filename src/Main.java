@@ -2,19 +2,19 @@ import cache.Cache;
 import cache.FIFOCache;
 import cache.RANDCache;
 import javafx.util.Pair;
-import org.math.plot.Plot2DPanel;
 
-import javax.swing.*;
-import java.awt.*;
+import java.util.Comparator;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
 
 public class Main {
 
-    //Stores scheduled events in the form of (time, itemNo) where time = event time & 1 <= itemNo <= N
-    //Ordered by time ascending
-    private static Queue<Pair<Double, Integer>> scheduledArrivals = new PriorityQueue<>((o1, o2) -> {
+    private static final int SAMPLE_SIZE = 50;
+    private static final int STARTUP_BIAS_END_TIME = 1200;
+    private static final int NUM_EVENTS = 20000;
+
+    private static Comparator<Pair<Double, Integer>> leastTimeFirstOrdering = ((o1, o2) -> {
         if (o1.getKey().equals(o2.getKey())) {
             return 0;
         }
@@ -28,80 +28,81 @@ public class Main {
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        System.out.println("Please type values for n and m: \n");
+        System.out.println("Please type values for n (population size) and m (cache capacity): \n");
         int N = sc.nextInt();
         int m = sc.nextInt();
         System.out.println("Please enter a strategy: RAND or FIFO\n");
         String strategy = sc.next();
 
-        Cache cache;
+        Cache cache = createCache(strategy, m);
+        if (cache == null) {
+            return;
+        }
+
+        StatsLogger hitRatioStats = new StatsLogger(SAMPLE_SIZE);
+        StatsLogger missRateStats = new StatsLogger(SAMPLE_SIZE);
+
+        for (int k = 0; k < SAMPLE_SIZE; k++) {
+            //Returns a pair <Hit Ratio, Miss Rate>
+            TrialResult trialResult = performTrial(N, cache);
+            hitRatioStats.feedDataPoint(trialResult.getHitRatio());
+            missRateStats.feedDataPoint(trialResult.getMissRate());
+        }
+
+        writeStatsToConsole(hitRatioStats, missRateStats);
+    }
+
+    private static Cache createCache(String strategy, int cacheSize) {
 
         switch (strategy) {
             case "RAND":
-                cache = new RANDCache(m);
-                break;
+                return new RANDCache(cacheSize);
             case "FIFO":
-                cache = new FIFOCache(m);
-                break;
+                return new FIFOCache(cacheSize);
             default:
                 System.err.println("Unknown strategy!");
-                return;
+                return null;
         }
+    }
+
+    private static TrialResult performTrial(int populationSize, Cache cache) {
+        Queue<Pair<Double, Integer>> scheduledArrivals = new PriorityQueue<>(leastTimeFirstOrdering);
+        scheduleInitialArrivals(scheduledArrivals, populationSize);
 
         double T = 0;
         double hitCount = 0;
         double missCount = 0;
-        scheduleInitialArrivals(N);
 
-        Plot2DPanel plot = new Plot2DPanel();
-        double x[] = new double[20000];
-        double y[] = new double[20000];
+        //Experiment k
+        for (int i = 0; i < NUM_EVENTS; i++) {
 
-        for (int i = 0; i < 20000; i++) {
-
+            //Get next arrival & schedule next
             Pair<Double, Integer> arrivalPair = scheduledArrivals.poll();
             T = arrivalPair.getKey();
             int arrivalIndex = arrivalPair.getValue();
-            if (cache.retrieve(arrivalIndex)) {
+
+            //Only recording stats for T>1200 due to start-up bias
+            if (cache.retrieve(arrivalIndex) && T >= STARTUP_BIAS_END_TIME) {
                 hitCount++;
             } else {
                 missCount++;
             }
-            scheduleNext(T, arrivalIndex);
-
-            //Writing stats for graph plot
-            x[i] = T;
-            double missRate = missCount / T;
-            y[i] = missRate;
-
-            if (T >= 1200) {
-                //Safe point to discard existing stats due to start-up bias
-                hitCount = 0;
-                missCount = 0;
-            }
+            scheduleNext(scheduledArrivals, T, arrivalIndex);
         }
 
+        double hitRatio = hitCount / (hitCount + missCount);
+        double missRate = missCount / T;
 
-        //Plot miss rate to determine time after which start-up bias ends
-        plot.addLinePlot("Miss rate plot", x, y);
-        plot.addLabel("Time", Color.RED, 280.0, 580.0);
-        plot.addLabel("Miss Rate", Color.RED, 10.0, 265.0);
-        JFrame frame = new JFrame("a plot panel");
-        frame.setSize(600, 600);
-        frame.setContentPane(plot);
-        frame.setVisible(true);
-
-        System.out.println("Number of hits were : " + hitCount);
-        System.out.println("Number of misses were : " + missCount);
+        return new TrialResult(hitRatio, missRate);
     }
 
-    private static void scheduleInitialArrivals(int N) {
+    private static void scheduleInitialArrivals(Queue<Pair<Double, Integer>> scheduledArrivals, int N) {
         for (int i = 0; i < N; i++) {
-            scheduleNext(0, i + 1);
+            scheduleNext(scheduledArrivals, 0, i + 1);
         }
     }
 
-    private static void scheduleNext(double T, int num) {
+    private static void scheduleNext(Queue<Pair<Double, Integer>> scheduledArrivals, double T, int num) {
         double arrivalTime = getNextArrival(T, num);
         Pair<Double, Integer> p = new Pair<>(arrivalTime, num);
         scheduledArrivals.add(p);
@@ -111,6 +112,31 @@ public class Main {
         double rand = Math.random();
         double interval = -Math.log(1 - rand) * num; //lambda = 1/num
         return T + interval;
+    }
+
+    private static void writeStatsToConsole(StatsLogger hitRatioStats, StatsLogger missRateStats) {
+        System.out.println("Hit ratio mean: " + hitRatioStats.getMean());
+        System.out.println("Hit ratio confidence interval (95%): " + hitRatioStats.getConfidenceInterval());
+        System.out.println("Miss rate mean: " + missRateStats.getMean());
+        System.out.println("Miss rate confidence interval (95%): " + missRateStats.getConfidenceInterval());
+    }
+
+    private static class TrialResult {
+        private double hitRatio;
+        private double missRate;
+
+        public TrialResult(double hitRatio, double missRate) {
+            this.hitRatio = hitRatio;
+            this.missRate = missRate;
+        }
+
+        public double getHitRatio() {
+            return hitRatio;
+        }
+
+        public double getMissRate() {
+            return missRate;
+        }
     }
 
 }
