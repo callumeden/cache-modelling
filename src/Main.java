@@ -126,16 +126,16 @@ public class Main {
         private double hitRatio;
         private double missRate;
 
-        public TrialResult(double hitRatio, double missRate) {
+        TrialResult(double hitRatio, double missRate) {
             this.hitRatio = hitRatio;
             this.missRate = missRate;
         }
 
-        public double getHitRatio() {
+        double getHitRatio() {
             return hitRatio;
         }
 
-        public double getMissRate() {
+        double getMissRate() {
             return missRate;
         }
     }
