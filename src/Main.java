@@ -83,11 +83,16 @@ public class Main {
             int arrivalIndex = arrivalPair.getValue();
 
             //Only recording stats for T>1200 due to start-up bias
-            if (cache.retrieve(arrivalIndex) && T >= STARTUP_BIAS_END_TIME) {
-                hitCount++;
-            } else {
-                missCount++;
+            if ( T >= STARTUP_BIAS_END_TIME) {
+
+                if (cache.retrieve(arrivalIndex)) {
+                    hitCount++;
+                } else {
+                    missCount++;
+                }
+
             }
+
             scheduleNext(scheduledArrivals, T, arrivalIndex);
         }
 
