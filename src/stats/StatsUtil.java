@@ -38,6 +38,6 @@ public class StatsUtil {
         double standardError = standardDeviation / Math.sqrt(dataPointCnt);
         double errMargin = standardError * CRTICAIL_VALUE;
 
-        return "[" + (mean - errMargin) + ", " + (mean + errMargin) + "]";
+        return String.format("[%.6f, %.6f]", (mean - errMargin), (mean + errMargin));
     }
 }

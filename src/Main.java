@@ -95,6 +95,7 @@ public class Main {
 
             scheduleNext(scheduledArrivals, T, arrivalIndex);
         }
+        System.out.println(T);
 
         double hitRatio = hitCount / (hitCount + missCount);
         double missRate = missCount / T;
@@ -121,9 +122,10 @@ public class Main {
     }
 
     private static void writeStatsToConsole(StatsUtil hitRatioStats, StatsUtil missRateStats) {
-        System.out.println("Hit ratio mean: " + hitRatioStats.getMean());
-        System.out.println("Hit ratio confidence interval (95%): " + hitRatioStats.getConfidenceInterval());
-        System.out.println("Miss rate mean: " + missRateStats.getMean());
+        System.out.format("Hit ratio mean: %.6f%n", hitRatioStats.getMean());
+
+        System.out.println("Hit ratio confidence interval (95%) : " + hitRatioStats.getConfidenceInterval());
+        System.out.format("Miss rate mean: %.6f%n",  missRateStats.getMean());
         System.out.println("Miss rate confidence interval (95%): " + missRateStats.getConfidenceInterval());
     }
 
